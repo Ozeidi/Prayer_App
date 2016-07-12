@@ -1,0 +1,194 @@
+from praytimes2 import *
+import pygame,sys,time,operator,datetime, ConfigParser,winsound
+from PyQt4 import QtCore, uic
+from umalqurra.hijri_date import HijriDate
+from arabic_rtlize.process import rtlize
+from pygame.locals import *
+um=HijriDate.today()
+month_gorgian = {1:'يناير',2:'فبراير',3:'مارس',4:'أبريل',5:'مايو',6:'يونيو',7:'يوليو'
+,8:'أغسطس',9:'سبتمبر',10:'أكتوبر',11:'نوفمبر',12:'ديسمبر'}
+
+#Drawing Cordinates
+times_xy=[(260,320), (418,393), (406,579), (240,653), (88,571), (100,406)]
+dates_xy=[(500,0), (500,30), (500,60),(0,0),(0,30),(0,60),(239,470)]
+Prayer_Times={ 'fajr': '','dhuhr': '', 'asr': '', 'maghrib': '', 'isha': ''}
+Iqama_offset={'fajr': '','dhuhr': '', 'asr': '', 'maghrib': '', 'isha': ''}
+Iqama_Times={'fajr': '','dhuhr': '', 'asr': '', 'maghrib': '', 'isha': ''}
+global var_Due_PT, Global_List,PT
+var_Due_PT=10
+#Pygame Inititalization
+pygame.init()
+display_w=600
+display_h=1000
+resolution=(display_w,display_h)
+WHITE=(250,250,250)
+BLACK=(0,0,0)
+Current_Time=0
+surface =pygame.display.set_mode(resolution)
+pygame.display.set_caption('My Prayer App')
+clock=pygame.time.Clock()
+basicfont =pygame.font.SysFont(None,28)
+datefont=pygame.font.SysFont('Hacen Liner XXL',30)
+Image = pygame.image.load(r'E:\Misc\01. Tech\01. Programing\03. Projects\02. Prayer Times\s.jpeg')
+Image= pygame.transform.scale(Image,resolution)
+#PyQt Settings
+qtCreatorFile=r'E:\Misc\01. Tech\01. Programing\03. Projects\02. Prayer Times\Qt\untitled.ui'
+Ui_MainWindow, QtBaseClass =uic.loadUiType(qtCreatorFile)
+def DrawTimes(times):
+    for t in enumerate(times):
+        text= basicfont.render(t[1],True,WHITE)
+        surface.blit(text,times_xy[t[0]])
+def DrawText(txt,xy):
+        text= datefont.render(rtlize(unicode(txt,'UTF-8')),True,WHITE)
+        surface.blit(text,xy)
+        #print txt
+def DrawDates():
+    dates=[]
+    um=HijriDate.today()
+    Current_Date= time.strftime('%d %m %Y')
+    Current_Time=time.strftime('%I:%M %p %S')
+    dates.append(str(int(um.day)))
+    dates.append(rtlize(unicode(um.month_name,'UTF-8')))
+    dates.append(str(int(um.year)))
+    dates.append(time.strftime('%d'))
+    dates.append(rtlize(unicode(month_gorgian[int(time.strftime('%m'))],'UTF-8')))
+    dates.append(time.strftime('%Y'))
+    dates.append(Current_Time)
+    for d in enumerate(dates):
+        text= datefont.render(d[1],True,WHITE)
+        surface.blit(text,dates_xy[d[0]])
+def Due_Prayer(PT,CT):
+    for x in range(0,len(PT)):
+        if PT[x].hour==CT.hour and PT[x].minute==CT.minute: 
+            global var_Due_PT
+            var_Due_PT =x   
+
+def Time_to_Prayer(PT,CT):
+    TtP=[]
+    for x in range(0,len(PT)):
+        td=PT[x]-CT
+        hr=divmod(td.total_seconds(),60*60)
+        min=divmod(hr[1],60)
+        TtP.append('{}:{} {}'.format(int(hr[0]),int(min[0]),int(min[1])))
+    print TtP
+def Time_to_Iqama(IT,CT):
+    global var_Due_PT
+    winsound.Beep(1000,1000)
+    TtI=''
+    td=IT-CT
+    hr=divmod(td.total_seconds(),60*60)
+    min=divmod(hr[1],60)
+    if hr[0] >-1:
+        DrawText('الوقت المتبقي لإقامة الصلاة',(150,800))
+    else:
+        DrawText('أقم الصلاة',(200,800))
+    if min[0]>10:
+        TtI=TtI+ '{} :'.format(int(min[0])) 
+    else: 
+        TtI=TtI+ '0{} :'.format(int(min[0]))
+    if min[1] >10:
+        TtI=TtI+ ' {}'.format(int(min[1]))
+    else:
+        TtI=TtI+ ' 0{}'.format(int(min[1]))
+    if hr[0]<0 and min[0] == 59: 
+        TtI='00 : 00'
+    if hr[0]<0 and min[0] < 59:
+        var_Due_PT=10
+    return TtI
+
+
+def parse_to_time(in_string,offset=0):
+    CT=datetime.datetime.now()
+    TD_OB={}
+    Parsed={}
+
+    for k in range(0,len(in_string)):
+        TD_OB[k]=time.strptime(in_string[k],'%I:%M%p')
+        TD_OB[k]=datetime.datetime(CT.year,CT.month,CT.day,hour=TD_OB[k].tm_hour,minute=TD_OB[k].tm_min)
+        #print  start
+        Parsed[k]=TD_OB[k]+datetime.timedelta(minutes=offset)
+        #Parsed[k]=datetime.datetime.strftime(Parsed[k],'%I:%M%p')
+        #Iqama[k]='%{1}:%{2}%{3}'.format(Iqama[k].tm_hour,Iqama[k].tm_min,Iqama[k].
+
+    return Parsed
+#Main Function
+def Initialize():
+    global Global_List,PT
+    PT=PrayTimes('MWL')
+    Prayer_offset ={'asr': 5, 'maghrib': 5, 'midnight': 5, 'fajr': 0, 'sunrise': 0, 'sunset': 5, 'isha': 5, 'imsak': 5, 'dhuhr': 5}
+    Iqama_offset={'asr': 20, 'maghrib': 20, 'midnight': 20, 'fajr': 20, 'sunrise': 20, 'sunset': 20, 'isha': 20, 'imsak': 20, 'dhuhr': 20}
+    Prayer_Times = PT.getTimes((2016,6,1), (23.552908, 56.242908), +4,0,'12h')
+    Prayer_Times_slice=[Prayer_Times['fajr'], Prayer_Times['dhuhr'],Prayer_Times['asr'], Prayer_Times['maghrib'], Prayer_Times['isha']]
+    Prayer_DT_Obj=parse_to_time(Prayer_Times_slice)
+    Iqama_DT_Obj= parse_to_time(Prayer_Times_slice,20)
+
+    Global_List.append()
+
+def Settings_Form():
+    pass
+def main():
+    NewDay=1
+
+    '''
+    ######################################
+    #######################################
+    App Main Loop
+    #######################################
+    #######################################
+
+    '''
+    while True:
+        CT= datetime.datetime.now()
+        if CT.hour==0 and CT.minute==0 and CT.second in range(0,4): NewDay=1
+        if NewDay==1:
+            surface.blit(Image,(0,0))
+            pygame.display.update() 
+            PT=PrayTimes('MWL')
+            Prayer_offset ={'asr': 5, 'maghrib': 5, 'midnight': 5, 'fajr': 0, 'sunrise': 0, 'sunset': 5, 'isha': 5, 'imsak': 5, 'dhuhr': 5}
+            Iqama_offset={'asr': 20, 'maghrib': 20, 'midnight': 20, 'fajr': 20, 'sunrise': 20, 'sunset': 20, 'isha': 20, 'imsak': 20, 'dhuhr': 20}
+            PT.offset=Prayer_offset
+
+
+            Prayer_Times = PT.getTimes((CT.year,CT.month,CT.day), (23.552908, 56.242908), +4,0,'12h')
+            Prayer_Times_slice=[Prayer_Times['fajr'], Prayer_Times['dhuhr'],Prayer_Times['asr'], Prayer_Times['maghrib'], Prayer_Times['isha']]
+
+            Prayer_DT_Obj=parse_to_time(Prayer_Times_slice)
+            Iqama_DT_Obj= parse_to_time(Prayer_Times_slice,20)
+
+            #Prayer_DT_Obj[0]=Prayer_DT_Obj[0].replace(hour=CT.hour, minute=CT.minute)
+            #Iqama_DT_Obj[0]=Iqama                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           ............................_DT_Obj[0].replace(hour=CT.hour, minute=CT.minute+1)
+            NewDay=0
+        surface.blit(Image,(0,0))
+        if var_Due_PT == 10:
+            Due_Prayer(Prayer_DT_Obj,CT) 
+        else:
+            DrawText(Time_to_Iqama(Iqama_DT_Obj[var_Due_PT],CT),(220,850))
+
+        draw_list=[Prayer_Times['fajr'],Prayer_Times['sunrise'],Prayer_Times['dhuhr'],Prayer_Times['asr'],Prayer_Times['maghrib'],Prayer_Times['isha']]
+
+         
+
+        for event in pygame.event.get():
+            if event.type == MOUSEBUTTONUP:
+                text =basicfont.render('x={0},y={1}'.format(event.pos[0],event.pos[1]),True,WHITE)
+                surface.blit(Image,(0,0))
+                surface.blit(text,(0,0))
+                NewDay=1
+                print ( '({0},{1}),'.format(event.pos[0],event.pos[1])),
+            if event.type==pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        
+
+        DrawTimes(draw_list)
+        DrawDates()
+        pygame.display.update()
+        clock.tick(1)
+   
+if __name__=='__main__':
+    main()
+
+
+
+
+
