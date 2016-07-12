@@ -431,3 +431,4 @@ if __name__ == "__main__":
 	for i in ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha', 'Midnight']:
 		print(i+ ': '+ times[i.lower()])
 
+ 
